@@ -1,5 +1,4 @@
-from flask import Flask, render_template
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import json
 from flask_mail import Mail, Message
 
@@ -13,7 +12,6 @@ app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_DEFAULT_SENDER'] = 'colin@thinkvoltaic.de'
 
 mail = Mail(app)
-
 
 @app.route('/')
 def hello_world():
@@ -52,13 +50,47 @@ def submit_form():
 
     self_body += "\nPlease review the information and take necessary action.\n\nBest regards,\nZuschusschecker"
 
-    msg = Message(self_subject, recipients=["colin@thinkvoltaic.de"], body=self_body)
+    msg = Message(self_subject, recipients=["colin@thinkvoltaic.de","berat@thinkvoltaic.de"], body=self_body)
     mail.send(msg)
 
     user_subject = 'Anfrage Bestätigung Zuschusschecker'
     user_body = f"Sehr geehrte/r {firstName} {lastName},\n\nVielen Dank für Ihre Anfrage. Wir haben all Ihrer Informationen erhalten. Wir melden uns zeitnah mit einer Förderberatung.\n\nMit freundlichen Grüßen,\nZuschusschecker"
     msg = Message(user_subject,recipients=[email],body= user_body)
     mail.send(msg)
+    
+    return jsonify({'message': 'Form submitted successfully'})
+
+@app.route('/voltaicfunnel')
+def voltaic_html():
+    return render_template('voltaicfunnel.html')
+
+@app.route('/vsubmit', methods=['POST'])
+def voltaic_funnel():
+    vdata = request.data
+    vfinal_data = json.loads(vdata.decode('utf-8'))
+    vfirstName = vfinal_data['firstName']
+    vlastName = vfinal_data['lastName']
+    velec = vfinal_data['elec']
+    vstreet = vfinal_data['street']
+    vpostalcode = vfinal_data['postalCode']
+    vcity = vfinal_data['city']
+    vemail = vfinal_data['email']
+    vphone = vfinal_data['phone']
+    vuserquestionanswer = vfinal_data['useranswers']
+
+    vself_subject = 'Neue Anfrage von der Voltaic-Website'
+    vself_body = f"Liebes Team,\n\nHier ein neuer Lead:\n\nName: {vfirstName} {vlastName}\nEmail: {vemail}\nPLZ: {vpostalcode}\nStadt: {vcity}\nTelefon: {vphone}\nStraße und Hausnummer: {vstreet}\n\nInfos zum Objekt:\n\nFrage: Wie hoch ist Ihr Stromverbrauch? \nAntwort: {velec}kWh im Monat\n"
+    
+    for vquestion_answer in vuserquestionanswer:
+        vself_body += f"\nFrage: {vquestion_answer['question']}\nAntwort: {vquestion_answer['answer']}\n"
+
+    vmsg = Message(vself_subject, recipients=["colin@thinkvoltaic.de"], body=vself_body)
+    mail.send(vmsg)
+
+    vuser_subject = 'Anfrage Bestätigung Voltaic'  
+    vuser_body = f"Sehr geehrte/r {vfirstName} {vlastName},\n\nVielen Dank für Ihre Anfrage. Wir haben all Ihrer Informationen erhalten. Wir melden uns zeitnah.\n\nMit freundlichen Grüßen,\nIhr Voltaic Team"
+    vmsg = Message(vuser_subject, recipients=[vemail], body=vuser_body)
+    mail.send(vmsg)
     
     return jsonify({'message': 'Form submitted successfully'})
 
